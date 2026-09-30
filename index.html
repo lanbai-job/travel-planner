@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <title>旅游规划助手</title>
+    <link rel="stylesheet" href="styles.css?v=11">
+    <!-- html2canvas 用于导出图片 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <!-- jsPDF 用于导出 PDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <!-- 星空粒子背景 -->
+    <script src="https://cdn.jsdelivr.net/npm/@tsparticles/engine@4/tsparticles.engine.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tsparticles/slim@4/tsparticles.slim.bundle.min.js"></script>
+</head>
+<body>
+    <div id="tsparticles"></div>
+    <!-- 右上角固定二维码图片 -->
+    <img src="qrcode.png" alt="二维码" class="fixed-qrcode">
+    <div class="app-container">
+        <!-- 侧边栏 -->
+        <aside class="sidebar">
+            <div class="logo">
+                <h1><span class="logo-icon">🗺️</span><span class="logo-text">旅游规划</span></h1>
+            </div>
+            <nav class="nav-menu">
+                <button class="nav-item active" data-tab="destinations">
+                    <span class="icon">📍</span>
+                    <span>目的地管理</span>
+                </button>
+                <button class="nav-item" data-tab="schedule">
+                    <span class="icon">📅</span>
+                    <span>日程编排</span>
+                </button>
+                <button class="nav-item" data-tab="budget">
+                    <span class="icon">💰</span>
+                    <span>费用估算</span>
+                </button>
+            </nav>
+            <div class="sidebar-footer">
+                <button id="exportBtn" class="btn btn-primary">
+                    <span>📤</span> <span class="btn-text">导出分享</span>
+                </button>
+            </div>
+        </aside>
+
+        <!-- 主内容区 -->
+        <main class="main-content">
+            <!-- 目的地管理标签页 -->
+            <section id="destinations" class="tab-content active">
+                <div class="tab-header">
+                    <h2>目的地管理</h2>
+                    <button id="addDestinationBtn" class="btn btn-primary">+ 添加目的地</button>
+                </div>
+                <div id="destinationsList" class="destinations-grid">
+                    <!-- 目的地卡片将通过 JS 动态生成 -->
+                </div>
+            </section>
+
+            <!-- 日程编排标签页 -->
+            <section id="schedule" class="tab-content">
+                <div class="tab-header">
+                    <h2>日程编排</h2>
+                    <div class="header-actions">
+                        <button id="addDayBtn" class="btn btn-secondary">+ 添加一天</button>
+                    </div>
+                </div>
+                <div id="scheduleContainer" class="schedule-container">
+                    <!-- 日程将通过 JS 动态生成 -->
+                </div>
+            </section>
+
+            <!-- 费用估算标签页 -->
+            <section id="budget" class="tab-content">
+                <div class="tab-header">
+                    <h2>费用估算</h2>
+                </div>
+                <div class="budget-summary">
+                    <div class="summary-card total">
+                        <h3>总预算</h3>
+                        <p id="totalBudget" class="amount">¥0</p>
+                    </div>
+                    <div class="summary-card">
+                        <h3>交通费用</h3>
+                        <p id="transportBudget" class="amount">¥0</p>
+                    </div>
+                    <div class="summary-card">
+                        <h3>住宿费用</h3>
+                        <p id="accommodationBudget" class="amount">¥0</p>
+                    </div>
+                    <div class="summary-card">
+                        <h3>门票费用</h3>
+                        <p id="ticketBudget" class="amount">¥0</p>
+                    </div>
+                    <div class="summary-card">
+                        <h3>餐饮费用</h3>
+                        <p id="foodBudget" class="amount">¥0</p>
+                    </div>
+                    <div class="summary-card">
+                        <h3>其他费用</h3>
+                        <p id="otherBudget" class="amount">¥0</p>
+                    </div>
+                </div>
+                <div class="budget-details">
+                    <h3>费用明细</h3>
+                    <div id="budgetDetailsList" class="budget-list">
+                        <!-- 费用明细将通过 JS 动态生成 -->
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- 添加/编辑目的地模态框 -->
+    <div id="destinationModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modalTitle">添加目的地</h3>
+                <button class="close-btn">&times;</button>
+            </div>
+            <form id="destinationForm">
+                <input type="hidden" id="destinationId">
+                <div class="form-group">
+                    <label for="destName">目的地名称 *</label>
+                    <input type="text" id="destName" required>
+                </div>
+                <div class="form-group">
+                    <label for="destAddress">地址</label>
+                    <input type="text" id="destAddress">
+                </div>
+                <div class="form-group">
+                    <label for="destType">类型</label>
+                    <select id="destType">
+                        <option value="attraction">景点</option>
+                        <option value="hotel">酒店</option>
+                        <option value="restaurant">餐厅</option>
+                        <option value="transport">交通枢纽</option>
+                        <option value="other">其他</option>
+                    </select>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="destPrice">价格 (元)</label>
+                        <input type="number" id="destPrice" min="0" step="0.01">
+                    </div>
+                    <div class="form-group">
+                        <label for="destContact">联系方式</label>
+                        <input type="text" id="destContact">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="destNotes">备注</label>
+                    <textarea id="destNotes" rows="3"></textarea>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary cancel-btn">取消</button>
+                    <button type="submit" class="btn btn-primary">保存</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 添加日程项模态框 -->
+    <div id="scheduleItemModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>添加行程</h3>
+                <button class="close-btn">&times;</button>
+            </div>
+            <form id="scheduleItemForm">
+                <input type="hidden" id="scheduleDayIndex">
+                <div class="form-group">
+                    <label for="scheduleDestination">选择目的地 *</label>
+                    <select id="scheduleDestination" required>
+                        <option value="">请选择...</option>
+                    </select>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="scheduleTime">时间</label>
+                        <input type="time" id="scheduleTime">
+                    </div>
+                    <div class="form-group">
+                        <label for="scheduleDuration">时长 (小时)</label>
+                        <input type="number" id="scheduleDuration" min="0.5" step="0.5" value="1">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="scheduleNotes">备注</label>
+                    <textarea id="scheduleNotes" rows="2"></textarea>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary cancel-btn">取消</button>
+                    <button type="submit" class="btn btn-primary">添加</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 导出模态框 -->
+    <div id="exportModal" class="modal">
+        <div class="modal-content modal-small">
+            <div class="modal-header">
+                <h3>导出分享</h3>
+                <button class="close-btn">&times;</button>
+            </div>
+            <div class="export-options">
+                <button id="exportImage" class="export-option">
+                    <span class="icon">🖼️</span>
+                    <span>导出为图片</span>
+                </button>
+                <button id="exportPDF" class="export-option">
+                    <span class="icon">📄</span>
+                    <span>导出为 PDF</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js?v=11"></script>
+</body>
+</html>
